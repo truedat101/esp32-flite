@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := flite-example
+PROJECT_NAME := flite-adf-example
 
-include $(IDF_PATH)/make/project.mk
+include $(ADF_PATH)/make/project.mk
 

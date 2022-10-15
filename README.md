@@ -12,15 +12,18 @@ The `cmu_us_kal` voice is provided as an example. Other predefined voices that
 come with Flite are too big to fit into the FLASH. New voices could be added as
 separate components provided that they fit into FLASH.
 
+This code is modified to utilize the ADF.  The original code was forked from
+
+https://github.com/alkhimey/esp32-flite
+
 ## Running the Example
+
 The example runs a simple http server that receives GET requests of text to be
 synthesized. The program synthesizes the text and sends the PCM data over I2S.
-On the I2S receiving side I used PCM5102 chip, but any other chip might work.
+This was tested with an ESP32 LYRA MINI, however, any LYRA should function.
+Original code was using the PCM5102 chip, but any other chip might work.
 Additionally it could be possible to route I2S to an ESP32 internal 8 bit DAC.
 
-First, configure using `make menuconfig`. You need to set your Wi-Fi SSID and
-password as well as the pins to use for I2S. I tested with BCK = 26, WS = 25
-and DATA = 22.
 
 Since the produced WAV file is stored as an array of PCM values allocated on
 the heap, enough heap space must be available. The space required depends on
@@ -42,6 +45,12 @@ Flite finished processing all of the text. This reduces delay for longer texts
 and gives a real time feel. This is one of the advantages of using Flite rather
 than using cloud services and downloading the synthesized data via Wi-Fi.
 
+## References
+
+- Hardware: Lyra-3T or Lyra-TD
+- Software: ADF Master and IDF 4.4
+- Sample code: play_sdcard_mp3, pipeline_bt_source, esp-32-flite
+
 ## Adding to Your Project
 
 1. Copy the components into your project. 
@@ -49,7 +58,11 @@ than using cloud services and downloading the synthesized data via Wi-Fi.
 
         factory,  app,  factory, 0x10000, 0x2F0000,
 
-3. Configure with `make menuconfig`.
+Under Serial Flasher Config -> Set Flash Size 4MB
+3. Configure with `idf.py menuconfig`.
+
+Configure your SSID and KEY for WIFI.
+
 
 4. Then use the following code:
 

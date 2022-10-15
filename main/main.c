@@ -7,23 +7,42 @@
 
 #include <sys/param.h>
 #include "esp_system.h"
-#include <esp_log.h>
+#include "esp_log.h"
 #include "esp_spi_flash.h"
-#include <nvs_flash.h>
+#include "nvs_flash.h"
 #include "driver/i2s.h"
-#include <esp_wifi.h>
-#include <esp_event_loop.h>
-#include <esp_http_server.h>
+#include "esp_wifi.h"
+#include "esp_event_loop.h"
+#include "esp_http_server.h"
 
+#include "sdkconfig.h"
+#include "audio_element.h"
+#include "audio_pipeline.h"
+#include "audio_event_iface.h"
+#include "audio_common.h"
+#include "esp_peripherals.h"
+#include "i2s_stream.h"
+// #include "periph_sdcard.h"
+#include "board.h"
+#include "audio_idf_version.h"
 #include "flite.h"
 
 
 /* C O N F I G   D A T A */
 /*************************/
 
-static const char *TAG="APP";
+static const char *TAG="ADF_FLITE";
+// static const int I2S_NUM = I2S_NUM_0;
+#if CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
+static const int I2S_NUM = I2S_NUM_1;
+#else
 static const int I2S_NUM = I2S_NUM_0;
-
+#endif
+#if CONFIG_ESP_LYRAT_MINI_V1_1_BOARD
+#define I2S_CHANNELS        I2S_CHANNEL_FMT_RIGHT_LEFT
+#else
+#define I2S_CHANNELS        I2S_CHANNEL_FMT_ONLY_LEFT
+#endif
 /**
  * @brief Maximum characters allowed in the query string. This count includes
  * terminating /0. Notice that encoded characters become a sequence of 3
@@ -35,9 +54,10 @@ static const size_t MAX_CHARS = 256;
 
 #define ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
-#define I2S_BCK_PIN        CONFIG_I2S_BCK_PIN
-#define I2S_WS_PIN         CONFIG_I2S_WS_PIN
-#define I2S_DATA_PIN       CONFIG_I2S_DATA_PIN
+// TODO: Load these from pin cfg
+// #define I2S_BCK_PIN        I2S_BCK_PIN // CONFIG_I2S_BCK_PIN
+// #define I2S_WS_PIN         CONFIG_I2S_WS_PIN
+// #define I2S_DATA_PIN       CONFIG_I2S_DATA_PIN
 
 /* F W D  D E C L A R A T I O N S */
 /**********************************/
@@ -224,8 +244,10 @@ static void init_wifi(void *arg)
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
+
 static void init_i2s(void)
 {
+    /*
     static const i2s_config_t i2s_config = {
         .mode = I2S_MODE_MASTER | I2S_MODE_TX,
         .sample_rate = 44100, // will change later
@@ -247,7 +269,34 @@ static void init_i2s(void)
 
     i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL); 
     i2s_set_pin(I2S_NUM, &pin_config);
+    */
+   static const i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX,
+        .sample_rate = 44100,
+        .bits_per_sample = 16,
+        .channel_format = I2S_CHANNELS,
+#if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(4, 3, 0))
+        .communication_format = I2S_COMM_FORMAT_I2S,
+#else
+        .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+#endif
+        .intr_alloc_flags = 0, // default interrupt priority
+        // .tx_desc_auto_clear = true,
+        .dma_buf_count = 8,
+        .dma_buf_len = 64,
+        // .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2 | ESP_INTR_FLAG_IRAM,
+        .use_apll = false
+    };
+
+    // i2s_driver_install(port, &i2s_cfg, 0, NULL);
+    i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL); 
+    i2s_pin_config_t i2s_pin_cfg = {0};
+    memset(&i2s_pin_cfg, -1, sizeof(i2s_pin_cfg));
+    get_i2s_pins(I2S_NUM, &i2s_pin_cfg);
+    i2s_set_pin(I2S_NUM, &i2s_pin_cfg);
+    i2s_mclk_gpio_select(I2S_NUM, GPIO_NUM_0);
 }
+
 
 /**
  * @brief This is a callback called by Flite each time a chunk of the WAV is
