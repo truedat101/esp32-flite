@@ -14,6 +14,8 @@
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_http_server.h"
+#include "esp_chip_info.h"
+#include "esp_netif.h"
 
 #include "sdkconfig.h"
 #include "audio_element.h"
@@ -227,7 +229,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
 static void init_wifi(void *arg)
 {
-    tcpip_adapter_init();
+    // tcpip_adapter_init();
+    esp_netif_init()
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, arg));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
